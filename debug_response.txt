@@ -1,0 +1,22 @@
+FILE: app.py
+```python
+import base64
+import io
+import time
+import requests
+from flask import Flask, request, render_template, jsonify
+from PIL import Image, ImageEnhance, ImageFilter
+import pytesseract
+import os
+
+app = Flask(__name__)
+
+# Configure Tesseract path if it's not in your PATH
+# On Windows, you might need to set it like this:
+# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Ensure Tesseract OCR is installed on your system.
+# For Debian/Ubuntu: sudo apt-get install tesseract-ocr
+# For macOS: brew install tesseract
+
+# Default sample image (base64 encoded PNG)
+DEFAULT_IMAGE_BASE64 = 'iVBORw0KGgoAAAANSUhEUAAAKwAAACbCAMAAAB/sP7uAAAAh1BMVEVHcEwAAAAaGhohISH///8JCQsYGBgoKCgoKCgxMTHMzMwzMzM1NTU3Nzc4ODg9PT0+Pj4/Pz9DQ0NFRUVAQEBGRkZISEhMTExNTU1PT09TU1NUVFRWVlZSUlJdXV1eXl5gYGBjY2NlZWVnZ2dpZWVoaGhxcXhzc3N+fn6BgYGCgoKCg4MEV/p0AAAAAXRSTlMAQObYZgAACOhJREFUeNrtnQuWgyAQhY0F0Q1eEFV3q97/d7mABWzYm2+n05e26X5pT9vbt9+2c/pP47479tK5z4z907i/T/f4XnNrb9/XjIfzed4b6xH7P3H7Evh/vs/nPW9t+7LP6Xv5qf7/+h6P1h/6p1/p/t3z/t69n7z/19v/Yu9d8N8f+6/x+b/19f/kv//l//8v//cHuX/vtx/e//L+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/vL+/
