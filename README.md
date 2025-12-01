@@ -99,3 +99,4 @@ A deployed GitHub Pages site
 Automatic CI/CD workflow
 
 A fully generated or updated frontend application
+
