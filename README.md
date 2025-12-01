@@ -10,5 +10,5 @@ license: mit
 
 # Student Task Automation App
 
-This FastAPI app creates deploys and updates an app.# p1
-# p1-tds
+This FastAPI app creates deploys and updates an app.
+
